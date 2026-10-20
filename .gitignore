@@ -1,0 +1,4 @@
+build/
+*.elf
+dist/apps/WiiWaker/files/
+.DS_Store

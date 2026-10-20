@@ -57,6 +57,9 @@ void wii_aiming_get_offset(WiiAimingOffset* out_offset);
 // Haptic feedback (trigger a short rumble pulse)
 void wii_haptic_beat_pulse(uint32_t duration_ms);
 
+// Bridge Wii Remote + Nunchuk into GameCube PADStatus structure
+void wii_pad_poll(void* pad_status_array);
+
 #ifdef __cplusplus
 }
 #endif

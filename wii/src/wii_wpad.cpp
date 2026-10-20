@@ -225,4 +225,51 @@ void wii_haptic_beat_pulse(uint32_t duration_ms) {
 #endif
 }
 
+void wii_pad_poll(void* pad_status_array) {
+#if defined(GEKKO) || defined(__wii__)
+    if (!pad_status_array) return;
+    PADStatus* status = (PADStatus*)pad_status_array;
+    WPADData* wpad = WPAD_Data(WPAD_CHAN_0);
+    if (!wpad || wpad->err != WPAD_ERR_NONE) return;
+
+    u16 btn = 0;
+    if (wpad->btns_h & WPAD_BUTTON_A)     btn |= PAD_BUTTON_A;
+    if (wpad->btns_h & WPAD_BUTTON_B)     btn |= PAD_BUTTON_B;
+    if (wpad->btns_h & WPAD_BUTTON_1)     btn |= PAD_BUTTON_X;
+    if (wpad->btns_h & WPAD_BUTTON_2)     btn |= PAD_BUTTON_Y;
+    if (wpad->btns_h & WPAD_BUTTON_PLUS)  btn |= PAD_BUTTON_START;
+    if (wpad->btns_h & WPAD_BUTTON_MINUS) btn |= PAD_TRIGGER_Z;
+    if (wpad->btns_h & WPAD_BUTTON_UP)    btn |= PAD_BUTTON_UP;
+    if (wpad->btns_h & WPAD_BUTTON_DOWN)  btn |= PAD_BUTTON_DOWN;
+    if (wpad->btns_h & WPAD_BUTTON_LEFT)  btn |= PAD_BUTTON_LEFT;
+    if (wpad->btns_h & WPAD_BUTTON_RIGHT) btn |= PAD_BUTTON_RIGHT;
+
+    // Nunchuk expansion
+    if (wpad->exp.type == EXP_NUNCHUK) {
+        if (wpad->btns_h & WPAD_NUNCHUK_BUTTON_Z) {
+            btn |= PAD_TRIGGER_L;
+            status[0].triggerL = 255;
+        }
+        if (wpad->btns_h & WPAD_NUNCHUK_BUTTON_C) {
+            btn |= PAD_TRIGGER_R;
+            status[0].triggerR = 255;
+        }
+
+        float mag = wpad->exp.nunchuk.js.mag;
+        if (mag > 0.05f) {
+            float rad = wpad->exp.nunchuk.js.ang * (3.14159265f / 180.0f);
+            float sx = std::sin(rad) * mag * 80.0f;
+            float sy = std::cos(rad) * mag * 80.0f;
+            if (sx > 80.0f) sx = 80.0f; else if (sx < -80.0f) sx = -80.0f;
+            if (sy > 80.0f) sy = 80.0f; else if (sy < -80.0f) sy = -80.0f;
+            status[0].stickX = (s8)sx;
+            status[0].stickY = (s8)sy;
+        }
+    }
+
+    status[0].button |= btn;
+    status[0].err = PAD_ERR_NONE;
+#endif
+}
+
 } // extern "C"

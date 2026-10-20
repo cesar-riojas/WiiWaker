@@ -1,6 +1,9 @@
 #include "dolphin/os/OS.h"
 #include "dolphin/si/SIBios.h"
 #include "dolphin/pad/Pad.h"
+#include <string.h>
+
+void SIRefreshSamplingRate(void);
 
 extern u16 __OSWirelessPadFixMode AT_ADDRESS(OS_BASE_CACHED | 0x30E0);
 
@@ -459,6 +462,15 @@ u32 PADRead(PADStatus* status) {
     }
 
     OSRestoreInterrupts(enabled);
+
+#if defined(__wii__) || defined(GEKKO)
+    extern void wii_pad_poll(void* pad_status_array);
+    wii_pad_poll(status - 4);
+    if ((status - 4)->err == PAD_ERR_NONE) {
+        motor |= PAD_CHAN0_BIT;
+    }
+#endif
+
     return motor;
 }
 
