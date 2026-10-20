@@ -85,3 +85,14 @@ void wiiwaker_exit(void) {
 }
 
 } // extern "C"
+
+int main(int argc, char** argv) {
+    wiiwaker_init();
+
+    while (1) {
+        wiiwaker_present();
+    }
+
+    wiiwaker_exit();
+    return 0;
+}

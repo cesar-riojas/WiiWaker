@@ -30,7 +30,12 @@ void wii_memory_init(void) {
 
 void* wii_mem1_alloc(size_t size) {
 #if defined(GEKKO) || defined(__wii__)
-    return SYS_AllocArena1MemLo(size);
+    size = (size + 31) & ~31;
+    void* lo = SYS_GetArena1Lo();
+    void* newLo = (uint8_t*)lo + size;
+    if (newLo > SYS_GetArena1Hi()) return nullptr;
+    SYS_SetArena1Lo(newLo);
+    return lo;
 #else
     return std::malloc(size);
 #endif
@@ -38,7 +43,7 @@ void* wii_mem1_alloc(size_t size) {
 
 void wii_mem1_free(void* ptr) {
 #if defined(GEKKO) || defined(__wii__)
-    // Arena1 bump allocation - managed via high water mark
+    // Arena1 bump allocation
 #else
     std::free(ptr);
 #endif
@@ -46,7 +51,12 @@ void wii_mem1_free(void* ptr) {
 
 void* wii_mem2_alloc(size_t size) {
 #if defined(GEKKO) || defined(__wii__)
-    return SYS_AllocArena2MemLo(size);
+    size = (size + 31) & ~31;
+    void* lo = SYS_GetArena2Lo();
+    void* newLo = (uint8_t*)lo + size;
+    if (newLo > SYS_GetArena2Hi()) return nullptr;
+    SYS_SetArena2Lo(newLo);
+    return lo;
 #else
     return std::malloc(size);
 #endif

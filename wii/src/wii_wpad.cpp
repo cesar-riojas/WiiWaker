@@ -10,6 +10,7 @@
 #if defined(GEKKO) || defined(__wii__)
 #include <gccore.h>
 #include <wiiuse/wpad.h>
+#include <ogc/lwp_watchdog.h>
 #else
 // Stub types for host compilation / checks
 typedef struct {
@@ -27,31 +28,25 @@ typedef struct {
     vec3w_t accel;
     orient_t orient;
     struct {
-        float roll, pitch, yaw;
-    } motion_plus;
-    struct {
-        uint8_t type;
+        int type;
         union {
             struct {
-                uint32_t btns_h;
-                vec3w_t accel;
-                float js_mag;
-                float js_ang;
+                struct {
+                    float ang;
+                    float mag;
+                } js;
             } nunchuk;
+            struct {
+                short rx, ry, rz;
+            } mp;
         };
     } exp;
 } WPADData;
 
-#define WPAD_BUTTON_A     0x0800
-#define WPAD_BUTTON_B     0x0400
-#define WPAD_BUTTON_1     0x0200
-#define WPAD_BUTTON_2     0x0100
-#define WPAD_BUTTON_PLUS  0x0010
-#define WPAD_BUTTON_MINUS 0x1000
-#define WPAD_BUTTON_HOME  0x8000
-#define WPAD_BUTTON_Z     0x2000
-#define WPAD_BUTTON_C     0x4000
-#define WPAD_CHAN_0       0
+#define WPAD_EXP_NONE         0
+#define WPAD_EXP_NUNCHUK      1
+#define WPAD_EXP_MOTION_PLUS  5
+#define WPAD_CHAN_0           0
 #endif
 
 namespace {
@@ -65,17 +60,21 @@ static WiiTactMotionState s_tactState = {
 
 static WiiAimingOffset s_aimingOffset = { 0.0f, 0.0f, 0.0f };
 
-// Baton Gesture Tuning Constants
-static const float FLICK_THRESHOLD_GYRO   = 120.0f; // deg/sec
-static const float FLICK_MAX_GYRO         = 650.0f; // deg/sec (for 100% volume)
-static const float REBOUND_DEADZONE_GYRO  = 40.0f;  // deg/sec return to center
+// Baton Gesture Tuning Constants (MotionPlus raw units / deg/sec)
+static const float FLICK_THRESHOLD_GYRO   = 140.0f;
+static const float FLICK_MAX_GYRO         = 700.0f;
+static const float REBOUND_DEADZONE_GYRO  = 50.0f;
 
 // Low-pass filter smoothing factor
-static const float GYRO_SMOOTHING         = 0.25f;
+static const float GYRO_SMOOTHING         = 0.30f;
 static float s_smoothedPitchRate = 0.0f;
 static float s_smoothedYawRate   = 0.0f;
 
-static uint32_t s_rumbleStopTick = 0;
+#if defined(GEKKO) || defined(__wii__)
+static u64 s_rumbleStopTick = 0;
+#else
+static uint64_t s_rumbleStopTick = 0;
+#endif
 
 } // namespace
 
@@ -116,14 +115,20 @@ void wii_tact_gesture_update(float metronome_beat_rate) {
 #if defined(GEKKO) || defined(__wii__)
     WPADData* pad = WPAD_Data(WPAD_CHAN_0);
     if (pad) {
-        // Read MotionPlus angular rates (pitch/yaw in deg/s)
-        pitch_rate = pad->motion_plus.pitch;
-        yaw_rate   = pad->motion_plus.yaw;
+        // Read MotionPlus angular rates
+        if (pad->exp.type == EXP_MOTION_PLUS) {
+            pitch_rate = (float)pad->exp.mp.rx;
+            yaw_rate   = (float)pad->exp.mp.rz;
+        } else {
+            // Fallback: estimate stroke from accelerometer tilt / acceleration
+            pitch_rate = (float)pad->accel.y;
+            yaw_rate   = (float)pad->accel.x;
+        }
 
         // Read Nunchuk analog stick X for time signature
-        if (pad->exp.type == WPAD_EXP_NUNCHUK) {
-            float ang = pad->exp.nunchuk.js_ang;
-            float mag = pad->exp.nunchuk.js_mag;
+        if (pad->exp.type == EXP_NUNCHUK) {
+            float ang = pad->exp.nunchuk.js.ang;
+            float mag = pad->exp.nunchuk.js.mag;
             if (mag > 0.4f) {
                 nunchuk_x = mag * std::sin(ang * (3.14159265f / 180.0f));
             }
@@ -131,7 +136,7 @@ void wii_tact_gesture_update(float metronome_beat_rate) {
     }
 #endif
 
-    // Apply exponential smoothing to filter noise
+    // Apply exponential smoothing to filter sensor noise
     s_smoothedPitchRate = (s_smoothedPitchRate * (1.0f - GYRO_SMOOTHING)) + (pitch_rate * GYRO_SMOOTHING);
     s_smoothedYawRate   = (s_smoothedYawRate * (1.0f - GYRO_SMOOTHING)) + (yaw_rate * GYRO_SMOOTHING);
 
@@ -144,7 +149,7 @@ void wii_tact_gesture_update(float metronome_beat_rate) {
         s_tactState.meter = WII_TACT_METER_4_4; // 4/4 time (Center/Neutral)
     }
 
-    // Calculate total flick magnitude
+    // Calculate total stroke speed
     float flick_speed = std::sqrt(s_smoothedPitchRate * s_smoothedPitchRate +
                                   s_smoothedYawRate * s_smoothedYawRate);
 
@@ -202,12 +207,11 @@ void wii_aiming_get_offset(WiiAimingOffset* out_offset) {
 
 #if defined(GEKKO) || defined(__wii__)
     WPADData* pad = WPAD_Data(WPAD_CHAN_0);
-    if (pad) {
-        // Gyro rates to angular camera deltas
+    if (pad && pad->exp.type == EXP_MOTION_PLUS) {
         const float SENSITIVITY = 0.00065f;
-        s_aimingOffset.delta_pitch = pad->motion_plus.pitch * SENSITIVITY;
-        s_aimingOffset.delta_yaw   = pad->motion_plus.yaw * SENSITIVITY;
-        s_aimingOffset.delta_roll  = pad->motion_plus.roll * SENSITIVITY;
+        s_aimingOffset.delta_pitch = (float)pad->exp.mp.rx * SENSITIVITY;
+        s_aimingOffset.delta_yaw   = (float)pad->exp.mp.rz * SENSITIVITY;
+        s_aimingOffset.delta_roll  = (float)pad->exp.mp.ry * SENSITIVITY;
     }
 #endif
 
@@ -217,8 +221,7 @@ void wii_aiming_get_offset(WiiAimingOffset* out_offset) {
 void wii_haptic_beat_pulse(uint32_t duration_ms) {
 #if defined(GEKKO) || defined(__wii__)
     WPAD_Rumble(WPAD_CHAN_0, 1);
-    // Convert ms to Wii timer ticks
-    s_rumbleStopTick = gettime() + (tb_ticks_per_sec / 1000) * duration_ms;
+    s_rumbleStopTick = gettime() + millisecs_to_ticks(duration_ms);
 #endif
 }
 

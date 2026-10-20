@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1.0.0">
+  <name>WiiWaker</name>
+  <coder>Cesar Riojas &amp; Community</coder>
+  <version>1.0.0</version>
+  <release_date>20261020000000</release_date>
+  <short_description>The Legend of Zelda: The Wind Waker Native Wii Port</short_description>
+  <long_description>A native Nintendo Wii homebrew port of The Legend of Zelda: The Wind Waker based on the complete C++ decompilation. Features 729 MHz CPU execution, 88MB RAM utilization, 16:9 widescreen 480p, and full Wii Remote + MotionPlus support including authentic baton conducting gestures.</long_description>
+</app>
