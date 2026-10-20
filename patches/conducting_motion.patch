@@ -1,0 +1,45 @@
+--- game/src/d/actor/d_a_player_tact.inc
++++ game/src/d/actor/d_a_player_tact.inc
+@@ -20,6 +20,10 @@
+ #include "JKernel/JKRHeap.h"
+ #include "d/d_kankyo_wether.h"
+ 
++#if defined(GEKKO) || defined(__wii__)
++#include "wii_wpad.h"
++#endif
++
+ extern const Vec l_tact_top;
+ 
+ /* 8014D778-8014D7D4       .text getDayNightParamData__9daPy_lk_cFv */
+@@ -134,9 +138,30 @@
+ 
+     int rightDir, leftDir;
+     if (mProcVar6.m3570 != -5) {
++#if defined(GEKKO) || defined(__wii__)
++        // MotionPlus baton gesture detection
++        wii_tact_gesture_update(m35A0 / mDoAud_tact_getBeatFrames());
++        WiiTactDirection motionDir = wii_tact_get_direction();
++        if (motionDir != WII_TACT_DIR_CENTER) {
++            rightDir = (int)motionDir;
++        } else {
++            rightDir = mDoAud_getTactDirection(mDoAud_MAIN_STICK_e, mProcVar2.mTactWaitRightHandPos);
++        }
++
++        // Motion-based time signature
++        WiiTactMeter motionMeter = wii_tact_get_meter();
++        if (motionMeter == WII_TACT_METER_3_4) {
++            leftDir = mDoAud_ARM_LEFT_e;
++        } else if (motionMeter == WII_TACT_METER_6_4) {
++            leftDir = mDoAud_ARM_RIGHT_e;
++        } else {
++            leftDir = mDoAud_ARM_CENTER_e;
++        }
++        mDoAud_tact_setVolume(wii_tact_get_volume());
++#else
+         rightDir = mDoAud_getTactDirection(mDoAud_MAIN_STICK_e, mProcVar2.mTactWaitRightHandPos);
+         leftDir = mDoAud_getTactDirection(mDoAud_C_STICK_e, mProcVar3.mTactWaitLeftHandPos);
+         mDoAud_tact_setVolume(mStickDistance * cM_scos(m34DC));
++#endif
+     } else {
+         rightDir = mProcVar2.mTactWaitRightHandPos;
+         leftDir = mProcVar3.mTactWaitLeftHandPos;
