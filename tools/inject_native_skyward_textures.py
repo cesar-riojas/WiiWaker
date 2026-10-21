@@ -21,13 +21,15 @@ import shutil
 from io import BytesIO
 from PIL import Image
 
-sys.path.append("/Users/cesarriojas/Games/betterww")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+sys.path.append(os.path.join(REPO_ROOT, "..", "betterww"))
 from wwlib.rarc import RARC
 from wwlib.bti import BTIFile, ImageFormat, PaletteFormat
 from wwlib.gcm import GCM
 
-FINAL_ASSETS_DIR = "/Users/cesarriojas/Games/WiiWaker/wii/assets/skyward_sword_native/final"
-MENURES_PATH = "/Users/cesarriojas/Games/WiiWaker/dist/apps/WiiWaker/files/res/Msg/menures.arc"
+FINAL_ASSETS_DIR = os.path.join(REPO_ROOT, "wii", "assets", "skyward_sword_native", "final")
+MENURES_PATH = os.path.join(REPO_ROOT, "dist", "apps", "WiiWaker", "files", "res", "Msg", "menures.arc")
 PLAYABLE_ISO = "/Users/cesarriojas/Games/Game Cube/Better Wind Waker/WiiWaker_Playable.iso"
 BASE_ISO = "/Users/cesarriojas/Games/Game Cube/Better Wind Waker/BetterWindWaker.iso"
 SD_ISO = "/Users/cesarriojas/Games/Game Cube/Better Wind Waker/SD_Card_Ready/games/The Legend of Zelda The Wind Waker [GZLE01]/game.iso"

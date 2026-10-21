@@ -381,6 +381,7 @@ BOOL PADInit() {
 }
 
 u32 PADRead(PADStatus* status) {
+    PADStatus* baseStatus = status;
     BOOL enabled;
     s32 chan;
     u32 data[2];
@@ -465,8 +466,8 @@ u32 PADRead(PADStatus* status) {
 
 #if defined(__wii__) || defined(GEKKO)
     extern void wii_pad_poll(void* pad_status_array);
-    wii_pad_poll(status - 4);
-    if ((status - 4)->err == PAD_ERR_NONE) {
+    wii_pad_poll(baseStatus);
+    if (baseStatus[0].err == PAD_ERR_NONE) {
         motor |= PAD_CHAN0_BIT;
     }
 #endif

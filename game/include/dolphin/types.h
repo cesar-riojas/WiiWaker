@@ -97,8 +97,12 @@ typedef unsigned int uint;
 #include "stdint.h" // IWYU pragma: export
 
 #if !TARGET_PC
+#ifndef INT32_MAX
 #define INT32_MAX (0x7fffffff)
+#endif
+#ifndef UINT32_MAX
 #define UINT32_MAX (0xffffffff)
+#endif
 #endif
 
 #define FLOAT_MIN (1.175494351e-38f)

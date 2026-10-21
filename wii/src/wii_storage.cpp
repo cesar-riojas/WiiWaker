@@ -64,8 +64,25 @@ void* wii_file_load(const char* relative_path, size_t* out_size) {
 }
 
 int32_t wii_dvd_read_async(void* dst, uint32_t length, uint32_t offset) {
-    // Bridges DVDRead requests directly to our game archive / disc image
-    return 0; // Async read dispatched
+    if (!dst || length == 0) return -1;
+
+    static FILE* s_disc_file = nullptr;
+    if (!s_disc_file) {
+        s_disc_file = std::fopen("sd:/apps/WiiWaker/game.iso", "rb");
+        if (!s_disc_file) {
+            s_disc_file = std::fopen("sd:/games/GZLE01/game.iso", "rb");
+        }
+    }
+    if (!s_disc_file) return -1;
+
+    if (std::fseek(s_disc_file, (long)offset, SEEK_SET) != 0) {
+        return -1;
+    }
+    size_t read_bytes = std::fread(dst, 1, length, s_disc_file);
+#if defined(GEKKO) || defined(__wii__)
+    DCFlushRange(dst, read_bytes);
+#endif
+    return (int32_t)read_bytes;
 }
 
 } // extern "C"

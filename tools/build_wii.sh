@@ -20,7 +20,8 @@ echo " Building WiiWaker (.dol) with devkitPPC..."
 echo "=========================================================="
 cd "$(dirname "$0")/.."
 make clean
-make -j$(sysctl -n hw.ncpu)
+JOBS=$(sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+make -j"$JOBS"
 
 echo ""
 echo "=========================================================="

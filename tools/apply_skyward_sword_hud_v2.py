@@ -16,11 +16,13 @@ import shutil
 import struct
 from io import BytesIO
 
-sys.path.append("/Users/cesarriojas/Games/betterww")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+sys.path.append(os.path.join(REPO_ROOT, "..", "betterww"))
 from wwlib.rarc import RARC
 from wwlib.gcm import GCM
 
-MENURES_PATH = "/Users/cesarriojas/Games/WiiWaker/dist/apps/WiiWaker/files/res/Msg/menures.arc"
+MENURES_PATH = os.path.join(REPO_ROOT, "dist", "apps", "WiiWaker", "files", "res", "Msg", "menures.arc")
 PLAYABLE_ISO = "/Users/cesarriojas/Games/Game Cube/Better Wind Waker/WiiWaker_Playable.iso"
 SD_ISO = "/Users/cesarriojas/Games/Game Cube/Better Wind Waker/SD_Card_Ready/games/The Legend of Zelda The Wind Waker [GZLE01]/game.iso"
 

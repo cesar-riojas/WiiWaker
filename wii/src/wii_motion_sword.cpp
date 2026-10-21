@@ -57,10 +57,10 @@ void wii_sword_update(void) {
 
     // 1. Check Nunchuk Shake for Spin Attack (Twilight Princess style)
     if (wpad->exp.type == EXP_NUNCHUK) {
-        // Nunchuk accelerometer vector
-        float nx = (float)wpad->exp.nunchuk.accel.x;
-        float ny = (float)wpad->exp.nunchuk.accel.y;
-        float nz = (float)wpad->exp.nunchuk.accel.z;
+        // Calibrated Nunchuk gforce vector (1.0g at rest)
+        float nx = wpad->exp.nunchuk.gforce.x;
+        float ny = wpad->exp.nunchuk.gforce.y;
+        float nz = wpad->exp.nunchuk.gforce.z;
         float n_mag = std::sqrt(nx*nx + ny*ny + nz*nz);
         float delta_n = std::abs(n_mag - s_prevNunchukMag);
         s_prevNunchukMag = n_mag;
@@ -78,17 +78,27 @@ void wii_sword_update(void) {
         float pitch_rate = (float)wpad->exp.mp.rx; // Vertical pitch velocity
         float yaw_rate   = (float)wpad->exp.mp.rz; // Horizontal yaw velocity
         float roll_rate  = (float)wpad->exp.mp.ry;
+        (void)roll_rate;
 
         float abs_pitch = std::abs(pitch_rate);
         float abs_yaw   = std::abs(yaw_rate);
         float speed     = std::sqrt(pitch_rate * pitch_rate + yaw_rate * yaw_rate);
 
-        // Check Forward Thrust
-        float z_accel = (float)wpad->accel.z;
-        if (z_accel > THRUST_ACCEL_Z_MIN && speed < SWING_VELOCITY_MIN * 0.7f) {
+        // Check Forward Thrust using calibrated gforce (1.0g neutral -> >1.85g forward thrust spike)
+        float z_gforce = wpad->gforce.z;
+        if (z_gforce > THRUST_ACCEL_Z_MIN && speed < SWING_VELOCITY_MIN * 0.7f) {
             s_latchedAttack = WII_SWORD_THRUST;
             s_attackCooldownFrames = 14;
             wii_haptic_beat_pulse(20);
+            return;
+        }
+
+        // Check Spin Attack via high angular roll/yaw burst when MotionPlus is active
+        if (speed > SWING_VELOCITY_MIN * 2.8f && std::abs(roll_rate) > SWING_VELOCITY_MIN * 1.5f) {
+            s_latchedAttack = WII_SWORD_SPIN_ATTACK;
+            s_attackCooldownFrames = 18;
+            wii_speaker_play(WII_SFX_SWORD_SLASH);
+            wii_haptic_beat_pulse(35);
             return;
         }
 
@@ -116,10 +126,10 @@ void wii_sword_update(void) {
             return;
         }
     } else {
-        // 3. Fallback: Twilight Princess accelerometer flick
-        float wx = (float)wpad->accel.x;
-        float wy = (float)wpad->accel.y;
-        float wz = (float)wpad->accel.z;
+        // 3. Fallback: Twilight Princess calibrated gforce flick
+        float wx = wpad->gforce.x;
+        float wy = wpad->gforce.y;
+        float wz = wpad->gforce.z;
         float w_mag = std::sqrt(wx*wx + wy*wy + wz*wz);
         float delta_w = std::abs(w_mag - s_prevWiimoteMag);
         s_prevWiimoteMag = w_mag;

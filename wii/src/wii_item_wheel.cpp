@@ -9,7 +9,10 @@
 #include <cstdio>
 #include <cstring>
 
-extern "C" void wii_equip_inventory_item(int slot_btn, uint8_t inv_idx);
+extern "C" __attribute__((weak)) void wii_equip_inventory_item(int slot_btn, uint8_t inv_idx) {
+    (void)slot_btn;
+    (void)inv_idx;
+}
 
 #if defined(GEKKO) || defined(__wii__)
 #include <gccore.h>
@@ -127,21 +130,90 @@ void wii_item_wheel_draw(void) {
     if (!s_isOpen && s_openScale <= 0.01f) return;
 
 #if defined(GEKKO) || defined(__wii__)
-    // 2D Orthographic GX drawing of the 8-way wheel
+    // Set up 2D orthographic projection for 640x480 screen space
+    Mtx44 ortho;
+    Mtx modelview;
+    guOrtho(ortho, 0.0f, 480.0f, 0.0f, 640.0f, 0.0f, 1.0f);
+    GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
+    guMtxIdentity(modelview);
+    GX_LoadPosMtxImm(modelview, GX_PNMTX0);
+    GX_SetCurrentMtx(GX_PNMTX0);
+
+    GX_ClearVtxDesc();
+    GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+    GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+
+    GX_SetNumChans(1);
+    GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX, GX_LIGHTNULL, GX_DF_NONE, GX_AF_NONE);
+    GX_SetNumTexGens(0);
+    GX_SetNumTevStages(1);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+    GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+    GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+    GX_SetZMode(GX_DISABLE, GX_ALWAYS, GX_FALSE);
+    GX_SetCullMode(GX_CULL_NONE);
+
     const float CX = 320.0f;
     const float CY = 240.0f;
     const float RADIUS = 130.0f * s_openScale;
 
-    // Draw 8 radial slot circles
+    // 1. Draw translucent backdrop disc behind the wheel
+    const int RING_SEGS = 24;
+    const float BACK_R = 175.0f * s_openScale;
+    u8 bg_alpha = (u8)(130.0f * s_openScale);
+    GX_Begin(GX_TRIANGLEFAN, GX_VTXFMT0, RING_SEGS + 2);
+    GX_Position3f32(CX, CY, 0.0f);
+    GX_Color4u8(20, 18, 14, bg_alpha);
+    for (int s = 0; s <= RING_SEGS; s++) {
+        float a = (2.0f * 3.14159265f * (float)s) / (float)RING_SEGS;
+        GX_Position3f32(CX + std::sin(a) * BACK_R, CY - std::cos(a) * BACK_R, 0.0f);
+        GX_Color4u8(20, 18, 14, 0);
+    }
+    GX_End();
+
+    // 2. Draw 8 radial slot medallions
+    const int SLOT_SEGS = 12;
     for (int i = 0; i < WII_WHEEL_SLOT_COUNT; i++) {
         float rad = s_slots[i].angle_deg * (3.14159265f / 180.0f);
         float sx = CX + std::sin(rad) * RADIUS;
         float sy = CY - std::cos(rad) * RADIUS;
 
         bool is_selected = (i == s_selectedIndex);
-        float slot_scale = (is_selected ? 1.25f : 1.0f) * s_openScale;
-        (void)sx; (void)sy; (void)slot_scale;
+        float slot_r = (is_selected ? 28.0f : 22.0f) * s_openScale;
+
+        u8 r_col = is_selected ? 255 : 212;
+        u8 g_col = is_selected ? 225 : 175;
+        u8 b_col = is_selected ? 85  : 55;
+        u8 a_col = (u8)((is_selected ? 245.0f : 195.0f) * s_openScale);
+
+        GX_Begin(GX_TRIANGLEFAN, GX_VTXFMT0, SLOT_SEGS + 2);
+        GX_Position3f32(sx, sy, 0.0f);
+        GX_Color4u8(45, 38, 25, a_col);
+        for (int s = 0; s <= SLOT_SEGS; s++) {
+            float a = (2.0f * 3.14159265f * (float)s) / (float)SLOT_SEGS;
+            GX_Position3f32(sx + std::sin(a) * slot_r, sy - std::cos(a) * slot_r, 0.0f);
+            GX_Color4u8(r_col, g_col, b_col, a_col);
+        }
+        GX_End();
     }
+
+    // 3. Draw directional pointer ray from center toward selected sector
+    float ptr_rad = s_pointerAngle * (3.14159265f / 180.0f);
+    float tip_x = CX + std::sin(ptr_rad) * (RADIUS * 0.85f);
+    float tip_y = CY - std::cos(ptr_rad) * (RADIUS * 0.85f);
+    float perp_x = std::cos(ptr_rad) * 5.0f * s_openScale;
+    float perp_y = std::sin(ptr_rad) * 5.0f * s_openScale;
+
+    GX_Begin(GX_TRIANGLES, GX_VTXFMT0, 3);
+    GX_Position3f32(CX - perp_x, CY - perp_y, 0.0f);
+    GX_Color4u8(255, 240, 150, 220);
+    GX_Position3f32(CX + perp_x, CY + perp_y, 0.0f);
+    GX_Color4u8(255, 240, 150, 220);
+    GX_Position3f32(tip_x, tip_y, 0.0f);
+    GX_Color4u8(45, 235, 115, 255);
+    GX_End();
 #endif
 }
 
