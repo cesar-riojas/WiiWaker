@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Skyward Sword HUD Interactive Studio</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .slider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .slider-row label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted-foreground);
+    }
+    .slider-row input[type="range"] {
+      flex: 1;
+      margin: 0 12px;
+      cursor: pointer;
+    }
+    .slider-val {
+      font-size: 12px;
+      font-family: monospace;
+      width: 36px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4">
+  <div class="max-w-6xl mx-auto space-y-4">
+    <!-- Header -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-[var(--foreground)]">Skyward Sword HUD Interactive Studio</h1>
+        <p class="text-sm text-[var(--muted-foreground)]">Live, instant visual tuner for WiiWaker. Adjust sliders to see the exact layout in real time over Link's gameplay.</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="applyPreset('authentic')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition">
+          ★ Authentic Skyward Sword
+        </button>
+        <button onclick="applyPreset('compact')" class="px-3 py-1.5 bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--secondary-foreground)] text-xs font-semibold rounded-lg border border-[var(--border)] transition">
+          Compact
+        </button>
+        <button onclick="copyLayout()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition">
+          📋 Copy Layout Code
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- Live Game Screen Canvas -->
+      <div class="lg:col-span-8 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 shadow-sm flex flex-col items-center">
+        <div class="text-xs font-medium text-[var(--muted-foreground)] mb-2 flex justify-between w-full px-2">
+          <span>Live In-Game Viewport (Native 640 × 480 Space)</span>
+          <span class="text-emerald-500 font-medium">● Interactive Simulation Active</span>
+        </div>
+        <div class="relative overflow-hidden rounded-lg shadow-lg border border-black/40" style="width: 800px; height: 483px;">
+          <!-- Background Gameplay Canvas -->
+          <img src="__BG__" class="absolute inset-0 w-full h-full object-cover select-none pointer-events-none" />
+
+          <!-- Interactive HUD Layer (scaled 1.25x for 800x483 canvas) -->
+          <div id="hud-container" class="absolute inset-0 pointer-events-auto">
+            
+            <!-- ROW 1: Top Golden Crest & Item 1 -->
+            <div id="layer-row1" class="absolute select-none transition-all duration-75" style="left: 685px; top: 75px; width: 60px; height: 60px;">
+              <img src="__GEAR__" id="img-gear" class="absolute inset-0 w-full h-full object-contain filter drop-shadow-md" />
+              <!-- Item 1 (Telescope) centered inside medallion -->
+              <img src="__TELE__" id="img-item1" class="absolute w-8 h-8 object-contain" style="left: 14px; top: 14px;" />
+              <!-- Single [B] Button glyph with authentic WW font centered beneath crest -->
+              <img src="__B_BTN__" id="badge-b" class="absolute object-contain filter drop-shadow-sm" style="left: 19px; top: 62px; width: 22px; height: 26px;" />
+            </div>
+
+            <!-- ROW 2: Middle D-Pad Cross & Item 2 -->
+            <div id="layer-row2" class="absolute select-none transition-all duration-75" style="left: 685px; top: 175px; width: 60px; height: 60px;">
+              <img src="__DPAD__" id="img-dpad" class="absolute inset-0 w-full h-full object-contain filter drop-shadow-md" />
+              <!-- Item 2 (Sword or icon) centered inside D-pad -->
+              <img src="__SWORD__" id="img-item2" class="absolute w-7 h-7 object-contain" style="left: 16px; top: 16px;" />
+            </div>
+
+            <!-- ROW 3: Lower Domed (A) Button & Contextual Label -->
+            <div id="layer-row3" class="absolute select-none flex flex-col items-center transition-all duration-75" style="left: 688px; top: 260px; width: 54px;">
+              <img src="__A_BTN__" id="img-a-btn" class="w-14 h-14 object-contain filter drop-shadow-md" />
+              <!-- Clean floating white text with subtle shadow — NO BOX! -->
+              <div id="txt-action" class="mt-1.5 text-white font-bold text-xs tracking-wide text-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]" style="white-space: nowrap;">
+                Defend
+              </div>
+            </div>
+
+            <!-- ROW 4: Bottom (-) and (+) Buttons -->
+            <div id="layer-row4" class="absolute select-none flex items-center gap-4 transition-all duration-75" style="left: 675px; top: 360px;">
+              <img src="__MINUS__" id="img-minus" class="w-9 h-9 object-contain filter drop-shadow-md" />
+              <img src="__PLUS__" id="img-plus" class="w-9 h-9 object-contain filter drop-shadow-md" />
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Tuning Controls Sidebar -->
+      <div class="lg:col-span-4 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm space-y-4">
+        <h2 class="text-xs font-semibold tracking-wider uppercase text-[var(--muted-foreground)]">Stack Alignment & Spacing</h2>
+
+        <!-- Global Centerline X -->
+        <div class="space-y-1">
+          <div class="slider-row">
+            <label>Vertical Centerline (X)</label>
+            <input type="range" id="sl-center-x" min="510" max="600" value="556" oninput="updateLayout()" />
+            <span class="slider-val text-[var(--foreground)]" id="val-center-x">556</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)]">Aligns all 4 button clusters along the exact vertical axis.</p>
+        </div>
+
+        <div class="border-t border-[var(--border)] pt-2.5 space-y-2">
+          <h3 class="text-xs font-bold text-amber-500 uppercase tracking-wide">Row 1: Top Gear Crest [B]</h3>
+          <div class="slider-row">
+            <label>Y Position</label>
+            <input type="range" id="sl-row1-y" min="20" max="110" value="55" oninput="updateLayout()" />
+            <span class="slider-val text-[var(--foreground)]" id="val-row1-y">55</span>
+          </div>
+          <div class="slider-row">
+            <label>Crest Size</label>
+            <input type="range" id="sl-row1-size" min="40" max="70" value="54" oninput="updateLayout()" />
+            <span class="slider-val text-[var(--foreground)]" id="val-row1-size">54</span>
+          </div>
+        </div>
+
+        <div class="border-t border-[var(--border)] pt-2.5 space-y-2">
+          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wide">Row 2: Middle D-Pad Cross</h3>
+          <div class="slider-row">
+            <label>Y Position</label>
+            <input type="range" id="sl-row2-y" min="110" max="210" value="145" oninput="updateLayout()" />
+            <span class="slider-val text-[var(--foreground)]" id="val-row2-y">145</span>
+          </div>
+          <div class="slider-row">
+            <label>D-Pad Size</label>
+            <input type="range" id="sl-row2-size" min="40" max="70" value="52" oninput="updateLayout()" />
+            <span class="slider-val text-[var(--foreground)]" id="val-row2-size">52</span>
+          </div>
+        </div>
+
+        <div class="border-t border-[var(--border)] pt-2.5 space-y-2">
+          <h3 class="text-xs font-bold text-emerald-500 uppercase tracking-wide">Row 3: Lower Domed (A) Button</h3>
+          <div class="slider-row">
+            <label>Y Position</label>
+            <input type="range" id="sl-row3-y" min="190" max="310" value="230" oninput="updateLayout()" />
+            <span class="slider-val text-[var(--foreground)]" id="val-row3-y">230</span>
+          </div>
+          <div class="slider-row">
+            <label>Action Label Text</label>
+            <select id="sel-action-text" onchange="updateActionText()" class="text-xs px-2 py-1 bg-[var(--background)] border border-[var(--border)] rounded text-[var(--foreground)]">
+              <option value="Defend">Defend (Shield)</option>
+              <option value="Crouch">Crouch</option>
+              <option value="Roll">Roll</option>
+              <option value="Open">Open</option>
+              <option value="Talk">Talk</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="border-t border-[var(--border)] pt-2.5 space-y-2">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide">Row 4: Bottom (-) and (+)</h3>
+          <div class="slider-row">
+            <label>Y Position</label>
+            <input type="range" id="sl-row4-y" min="270" max="400" value="320" oninput="updateLayout()" />
+            <span class="slider-val text-[var(--foreground)]" id="val-row4-y">320</span>
+          </div>
+          <div class="slider-row">
+            <label>Button Spacing</label>
+            <input type="range" id="sl-row4-gap" min="15" max="60" value="38" oninput="updateLayout()" />
+            <span class="slider-val text-[var(--foreground)]" id="val-row4-gap">38</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output Code Preview Block -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Generated BLO Pane Layout Dictionary</span>
+        <span class="text-xs text-emerald-500 font-medium">Ready to inject directly into apply_skyward_sword_hud_v2.py</span>
+      </div>
+      <pre id="code-output" class="bg-black/80 text-emerald-400 p-3 rounded-lg text-xs font-mono overflow-x-auto select-all"></pre>
+    </div>
+  </div>
+
+  <script>
+    const S = 1.25; // 640x480 -> 800x483 scale multiplier
+
+    function updateActionText() {
+      const val = document.getElementById("sel-action-text").value;
+      document.getElementById("txt-action").innerText = val;
+    }
+
+    function updateLayout() {
+      const cx = parseInt(document.getElementById("sl-center-x").value);
+      const r1y = parseInt(document.getElementById("sl-row1-y").value);
+      const r1s = parseInt(document.getElementById("sl-row1-size").value);
+
+      const r2y = parseInt(document.getElementById("sl-row2-y").value);
+      const r2s = parseInt(document.getElementById("sl-row2-size").value);
+
+      const r3y = parseInt(document.getElementById("sl-row3-y").value);
+
+      const r4y = parseInt(document.getElementById("sl-row4-y").value);
+      const r4gap = parseInt(document.getElementById("sl-row4-gap").value);
+
+      // Update slider numbers
+      document.getElementById("val-center-x").innerText = cx;
+      document.getElementById("val-row1-y").innerText = r1y;
+      document.getElementById("val-row1-size").innerText = r1s;
+      document.getElementById("val-row2-y").innerText = r2y;
+      document.getElementById("val-row2-size").innerText = r2s;
+      document.getElementById("val-row3-y").innerText = r3y;
+      document.getElementById("val-row4-y").innerText = r4y;
+      document.getElementById("val-row4-gap").innerText = r4gap;
+
+      // Position Row 1 (Top Crest & [B])
+      const r1 = document.getElementById("layer-row1");
+      r1.style.left = (cx - r1s / 2) * S + "px";
+      r1.style.top = r1y * S + "px";
+      r1.style.width = r1s * S + "px";
+      r1.style.height = r1s * S + "px";
+      document.getElementById("img-item1").style.left = (r1s * S / 2 - 16) + "px";
+      document.getElementById("img-item1").style.top = (r1s * S / 2 - 16) + "px";
+      document.getElementById("badge-b").style.left = (r1s * S / 2 - 12) + "px";
+      document.getElementById("badge-b").style.top = (r1s * S + 4) + "px";
+
+      // Position Row 2 (Middle D-Pad)
+      const r2 = document.getElementById("layer-row2");
+      r2.style.left = (cx - r2s / 2) * S + "px";
+      r2.style.top = r2y * S + "px";
+      r2.style.width = r2s * S + "px";
+      r2.style.height = r2s * S + "px";
+      document.getElementById("img-item2").style.left = (r2s * S / 2 - 14) + "px";
+      document.getElementById("img-item2").style.top = (r2s * S / 2 - 14) + "px";
+
+      // Position Row 3 (Domed A Button)
+      const r3 = document.getElementById("layer-row3");
+      r3.style.left = (cx - 27) * S + "px";
+      r3.style.top = r3y * S + "px";
+
+      // Position Row 4 (Bottom Minus and Plus)
+      const r4 = document.getElementById("layer-row4");
+      r4.style.left = (cx - r4gap / 2 - 20) * S + "px";
+      r4.style.top = r4y * S + "px";
+
+      // Generate Code
+      generateCode(cx, r1y, r1s, r2y, r2s, r3y, r4y, r4gap);
+    }
+
+    function generateCode(cx, r1y, r1s, r2y, r2s, r3y, r4y, r4gap) {
+      const minusX = Math.round(cx - r4gap / 2 - 18);
+      const plusX = Math.round(cx + r4gap / 2 - 18);
+
+      const code = "PANE_LAYOUT = {\n" +
+        "    # --- ROW 1 (TOP): Golden Crest Medallion + [B] Key Below It ---\n" +
+        `    "baat": (${cx - Math.round(r1s/2)}, ${r1y}, ${r1s}, ${r1s}),   # Golden Gear Medallion\n` +
+        `    "ba01": (${cx - Math.round(r1s/2)}, ${r1y}, ${r1s}, ${r1s}),   # Item 1 socket\n` +
+        `    "xitk": (${cx - Math.round(r1s/2)}, ${r1y}, ${r1s}, ${r1s}),   # Item icon frame\n` +
+        `    "xitm": (${cx - Math.round(r1s/2) + 6}, ${r1y + 6}, ${r1s - 12}, ${r1s - 12}), # Equipped Item\n` +
+        `    "bab":  (${cx - 12}, ${r1y + r1s + 2}, 24, 28),     # [B] button key (centered below crest)\n\n` +
+        "    # --- ROW 2 (MIDDLE): D-Pad (+) Cross + Secondary Item ---\n" +
+        `    "ba02": (${cx - Math.round(r2s/2)}, ${r2y}, ${r2s}, ${r2s}),   # D-Pad cross key\n` +
+        `    "yitk": (${cx - Math.round(r2s/2) + 8}, ${r2y + 8}, ${r2s - 16}, ${r2s - 16}),\n` +
+        `    "yitm": (${cx - Math.round(r2s/2) + 8}, ${r2y + 8}, ${r2s - 16}, ${r2s - 16}), # Secondary item\n\n` +
+        "    # --- ROW 3 (LOWER): Domed (A) Button + Action Label Below ---\n" +
+        `    "bawe": (${cx - 24}, ${r3y}, 48, 48),  # Domed (A) button base\n` +
+        `    "bat2": (${cx - 24}, ${r3y}, 48, 48),  # Enlarged (A) active ring\n` +
+        `    "baa":  (-500, -500, 0, 0),          # HIDE duplicate "A" letter (dome already has it!)\n` +
+        `    "baa2": (-500, -500, 0, 0),\n` +
+        `    "bawd": (${cx - 40}, ${r3y + 54}, 80, 24), # Dynamic contextual action text\n` +
+        `    "bawp": (-500, -500, 0, 0),          # HIDE "Put away" overlap!\n` +
+        `    "basv": (${cx - 40}, ${r3y + 54}, 80, 24),\n\n` +
+        "    # --- ROW 4 (BOTTOM): (-) on Left, (+) on Right ---\n" +
+        `    "baz":  (${minusX}, ${r4y}, 36, 36),   # (-) button\n` +
+        `    "zitk": (${minusX}, ${r4y}, 36, 36),\n` +
+        `    "zitm": (${minusX}, ${r4y}, 36, 36),\n` +
+        `    "ba0r": (${plusX},  ${r4y}, 36, 36),   # (+) button\n` +
+        `    "bar1": (-500, -500, 0, 0),          # HIDE "R" letter overlay\n` +
+        "}";
+      document.getElementById("code-output").innerText = code;
+    }
+
+    function applyPreset(name) {
+      if (name === "authentic") {
+        document.getElementById("sl-center-x").value = 556;
+        document.getElementById("sl-row1-y").value = 55;
+        document.getElementById("sl-row1-size").value = 54;
+        document.getElementById("sl-row2-y").value = 145;
+        document.getElementById("sl-row2-size").value = 52;
+        document.getElementById("sl-row3-y").value = 230;
+        document.getElementById("sl-row4-y").value = 320;
+        document.getElementById("sl-row4-gap").value = 38;
+      } else if (name === "compact") {
+        document.getElementById("sl-center-x").value = 565;
+        document.getElementById("sl-row1-y").value = 45;
+        document.getElementById("sl-row1-size").value = 48;
+        document.getElementById("sl-row2-y").value = 125;
+        document.getElementById("sl-row2-size").value = 46;
+        document.getElementById("sl-row3-y").value = 205;
+        document.getElementById("sl-row4-y").value = 285;
+        document.getElementById("sl-row4-gap").value = 32;
+      }
+      updateLayout();
+    }
+
+    function copyLayout() {
+      const text = document.getElementById("code-output").innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Copied PANE_LAYOUT dictionary to clipboard!");
+      });
+    }
+
+    applyPreset("authentic");
+  </script>
+</body>
+</html>

@@ -1,4 +1,54 @@
+# ==============================================================================
+# WiiWaker .gitignore - Clean Legal Open Source Configuration
+# ==============================================================================
+
+# Build Outputs & Toolchain Intermediates
 build/
+*.o
+*.a
 *.elf
+*.dol
+*.map
+*.bin
+*.srec
+
+# Proprietary Game Assets & Disc Images (Do NOT distribute Nintendo copyrighted assets)
+*.iso
+*.gcm
+*.ciso
+*.wbfs
+*.arc
+*.tpl
+*.bti
+*.blo
+*.brlyt
+*.brlan
+*.bck
+*.bmt
+*.bva
+*.bas
+*.bmd
+*.bdl
+
+# Extracted Retail Game Disc Dumps (Do NOT distribute Nintendo copyrighted game dumps)
 dist/apps/WiiWaker/files/
+wii/assets/skyward_sword_native/*.arc
+wii/assets/skyward_sword_native/extracted/
+wii/assets/skyward_sword_native/png/
+extracted/
+
+# Python Virtual Environments & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# System & Editor Metadata
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.bak
+*~

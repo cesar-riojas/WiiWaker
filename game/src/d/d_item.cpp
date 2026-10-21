@@ -3011,3 +3011,10 @@ u8 getItemFromLifeBallTableWithoutEmono(u16 itemTableIdx) {
     
     return dItemNo_NONE_e;
 }
+
+extern "C" void wii_equip_inventory_item(int slot_btn, u8 inv_idx) {
+    if (dComIfGs_getItem(inv_idx) != dItemNo_NONE_e) {
+        dComIfGs_setSelectItem(slot_btn, inv_idx);
+        dComIfGp_setSelectItem(slot_btn);
+    }
+}

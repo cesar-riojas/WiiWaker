@@ -15,6 +15,7 @@
 #include "d/actor/d_a_player_main.h"
 #include "d/actor/d_a_player_HIO.h"
 #include "JSystem/J3DGraphLoader/J3DAnmLoader.h"
+#include "wii_motion_sword.h"
 
 #if VERSION == VERSION_DEMO
 void daPy_lk_c::setSwordModel()
@@ -385,6 +386,26 @@ void daPy_lk_c::setJumpCutAtParam() {
 
 /* 80155970-801559F0       .text getCutDirection__9daPy_lk_cFv */
 int daPy_lk_c::getCutDirection() {
+    // Skyward Sword 1:1 Directional Slash Integration
+    WiiSwordAttackType motion_atk = wii_sword_get_attack();
+    if (motion_atk != WII_SWORD_NONE) {
+        wii_sword_consume_attack();
+        switch (motion_atk) {
+            case WII_SWORD_VERTICAL_CHOP:
+                return DIR_NONE + 1;    // Overhead chop (procCutA)
+            case WII_SWORD_SLASH_RIGHT:
+                return DIR_RIGHT + 1;   // Horizontal right slash (procCutR)
+            case WII_SWORD_SLASH_LEFT:
+                return DIR_LEFT + 1;    // Horizontal left slash (procCutL)
+            case WII_SWORD_THRUST:
+                return DIR_FORWARD + 1; // Forward stabbing thrust (procCutF)
+            case WII_SWORD_DIAGONAL:
+                return DIR_RIGHT + 1;   // Diagonal cut
+            default:
+                break;
+        }
+    }
+
     int direction;
     if (mStickDistance <= 0.05f) {
         direction = DIR_NONE;
@@ -402,6 +423,13 @@ int daPy_lk_c::getCutDirection() {
 
 /* 801559F0-80155C3C       .text changeCutProc__9daPy_lk_cFv */
 int daPy_lk_c::changeCutProc() {
+    // Twilight Princess Nunchuk Shake Spin Attack Integration
+    if (wii_sword_is_spin_attack()) {
+        wii_sword_consume_attack();
+        procCutTurn_init(TRUE);
+        return true;
+    }
+
     if (m34C5 == 5 && changeSpecialBattle()) {
         m34C4 = 0;
         return true;

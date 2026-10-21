@@ -6,6 +6,9 @@
 #include "wii_memory.h"
 #include "wii_storage.h"
 #include "wii_wpad.h"
+#include "wii_motion_sword.h"
+#include "wii_item_wheel.h"
+#include "wii_speaker.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -109,6 +112,22 @@ int main(int argc, char** argv) {
         WiiAimingOffset aim;
         wii_aiming_get_offset(&aim);
 
+        WiiControllerType activeCtrl = wii_get_active_controller();
+        bool wheelOpen = wii_is_radial_wheel_open();
+        int activeSlot = wii_get_active_tool_slot();
+        WiiSwordAttackType swordAtk = wii_sword_get_attack();
+
+        const char* slot_names[] = { "Left Wing (X Tool)", "Top Socket (Y Tool)", "Right Wing (Z Tool)" };
+        const char* sword_atk_names[] = {
+            "IDLE / SHEATHED",
+            "OVERHEAD VERTICAL CHOP",
+            "HORIZONTAL SLASH (LEFT)",
+            "HORIZONTAL SLASH (RIGHT)",
+            "FORWARD THRUST / STAB",
+            "DIAGONAL SLASH (KESA-GIRI)",
+            "360-DEG GREAT SPIN ATTACK"
+        };
+
         // Update on-screen status every few frames
         if ((frame % 2) == 0) {
             std::printf("\x1b[2;0H");
@@ -116,23 +135,26 @@ int main(int argc, char** argv) {
             std::printf("                     WiiWaker v1.0.0                            \n");
             std::printf("    Native Nintendo Wii Port of The Wind Waker (Decompilation)  \n");
             std::printf("================================================================\n\n");
-            std::printf(" Hardware Architecture:\n");
-            std::printf("   CPU:  Broadway @ 729 MHz (Full Native Speed)\n");
-            std::printf("   MEM1: 24 MB 1T-SRAM (Active Framebuffers)\n");
-            std::printf("   MEM2: 64 MB GDDR3 (ARAM Emulation Arena Active)\n");
-            std::printf("   Video: 480p Progressive Scan (16:9 Widescreen)\n\n");
+            std::printf(" Active Controller Subsystem:\n");
+            std::printf("   Input Device:     [%s]\n", (activeCtrl == WII_CONTROLLER_WIIMOTE) ? "Wii Remote + Nunchuk (MotionPlus)" : "GameCube Controller (Port 1)");
+            std::printf("   Active Tool Slot: [%s]\n", slot_names[activeSlot % 3]);
+            std::printf("   Radial Wheel:     [%s]\n", wheelOpen ? "OPEN (Holding [B])" : "READY (Tap to Use / Hold to Open)");
+            std::printf("   Speaker Audio:    [ACTIVE - 3000 Hz Yamaha ADPCM Streaming]\n\n");
+
+            std::printf(" Motion Combat & Gyro Status:\n");
+            std::printf("   Motion Sword:     [%s]\n", sword_atk_names[(int)swordAtk % 7]);
+            std::printf("   Gyro Recenter:    [CALIBRATED (Tap/Hold D-Pad Down to Reset)]\n");
+            std::printf("   Aiming (Pitch/Yaw): %+0.4f / %+0.4f\n\n", aim.delta_pitch, aim.delta_yaw);
 
             std::printf(" MotionPlus Conducting Baton Status:\n");
             std::printf("   Baton Direction:  [%s]\n", dir_names[(int)dir % 5]);
             std::printf("   Time Signature:   [%s]\n", meter_names[(int)meter % 3]);
             std::printf("   Dynamic Volume:   [%0.2f / 1.00] (Stroke Intensity)\n\n", vol);
 
-            std::printf(" Motion Aiming (Bow / Hookshot):\n");
-            std::printf("   Pitch: %+0.4f | Yaw: %+0.4f | Roll: %+0.4f\n\n", aim.delta_pitch, aim.delta_yaw, aim.delta_roll);
-
             std::printf("----------------------------------------------------------------\n");
-            std::printf(" Wave or flick your Wii Remote to test baton conducting gestures!\n");
-            std::printf(" Tilt Nunchuk Left/Right to test time signatures.\n");
+            std::printf(" [B] Tap: Use active tool | [B] Hold: 8-Way Radial Item Wheel\n");
+            std::printf(" D-Pad Left/Up/Right: Equip Wings | D-Pad Down: Sheathe/Recenter\n");
+            std::printf(" Wiimote Slashing / Nunchuk Thrust: 1:1 Combat & Shield Bash\n");
             std::printf(" Press HOME on Wii Remote to exit.\n");
             std::printf("================================================================\n");
         }

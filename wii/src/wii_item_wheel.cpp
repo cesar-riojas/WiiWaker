@@ -3,9 +3,13 @@
  */
 
 #include "wii_item_wheel.h"
+#include "wii_wpad.h"
+#include "wii_speaker.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+
+extern "C" void wii_equip_inventory_item(int slot_btn, uint8_t inv_idx);
 
 #if defined(GEKKO) || defined(__wii__)
 #include <gccore.h>
@@ -22,6 +26,29 @@ static const WiiWheelSlotDef s_slots[WII_WHEEL_SLOT_COUNT] = {
     { 0x34, "Deku Leaf",        225.0f, true }, // South-West (7:30)
     { 0x25, "Grappling Hook",   270.0f, true }, // West (9:00)
     { 0x22, "Wind Waker",       315.0f, true }, // North-West (10:30)
+};
+
+// Wind Waker Inventory Slot IDs (matching dInvSlot_*_e)
+enum {
+    INV_SLOT_WIND_WAKER     = 2,
+    INV_SLOT_GRAPPLING_HOOK = 3,
+    INV_SLOT_BOOMERANG      = 5,
+    INV_SLOT_DEKU_LEAF      = 6,
+    INV_SLOT_BOW            = 12,
+    INV_SLOT_BOMB           = 13,
+    INV_SLOT_HOOKSHOT       = 19,
+    INV_SLOT_SKULL_HAMMER   = 20,
+};
+
+static const uint8_t s_invSlots[WII_WHEEL_SLOT_COUNT] = {
+    INV_SLOT_BOW,             // 0: Hero's Bow (North)
+    INV_SLOT_BOMB,            // 1: Bombs (NE)
+    INV_SLOT_BOOMERANG,       // 2: Boomerang (East)
+    INV_SLOT_HOOKSHOT,        // 3: Hookshot (SE)
+    INV_SLOT_SKULL_HAMMER,    // 4: Skull Hammer (South)
+    INV_SLOT_DEKU_LEAF,       // 5: Deku Leaf (SW)
+    INV_SLOT_GRAPPLING_HOOK,  // 6: Grappling Hook (West)
+    INV_SLOT_WIND_WAKER,      // 7: Wind Waker (NW)
 };
 
 static bool s_isOpen = false;
@@ -72,14 +99,16 @@ void wii_item_wheel_update(bool b_held, float stick_x, float stick_y) {
         }
     } else {
         if (s_isOpen) {
-            // Releasing B confirms selection!
+            // Releasing B confirms selection & equips the item!
             s_isOpen = false;
             s_openScale = 0.0f;
             s_holdFrames = 0;
 
-            // In game: trigger item equip on slot 0 (X / [1])
-            // dComIfGs_setSelectItem(0, s_slots[s_selectedIndex].item_id);
-            // dComIfGp_setSelectItem(0);
+            int active_slot = wii_get_active_tool_slot();
+            if (s_selectedIndex >= 0 && s_selectedIndex < WII_WHEEL_SLOT_COUNT) {
+                wii_equip_inventory_item(active_slot, s_invSlots[s_selectedIndex]);
+                wii_speaker_play(WII_SFX_ITEM_EQUIP);
+            }
         } else {
             s_holdFrames = 0;
         }

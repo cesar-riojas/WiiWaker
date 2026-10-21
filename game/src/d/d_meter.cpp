@@ -8,6 +8,10 @@
 #include "pc/pc_aspect.h"
 #include "pc/game_hooks.h" // dMeter_pc*: the widescreen HUD (pc_meter_hooks.cpp)
 #endif
+#if defined(GEKKO) || defined(__wii__)
+#include "wii_item_wheel.h"
+#include "wii_wpad.h"
+#endif
 #include "d/d_meter.h"
 #include "JSystem/J2DGraph/J2DOrthoGraph.h"
 #include "JSystem/J2DGraph/J2DScreen.h"
@@ -1114,6 +1118,9 @@ void dDlst_2DMETER1_c::draw() {
     graf->setPort();
     sMainParts3->draw(0.0f, 0.0f, graf);
     sMainParts1->draw(0.0f, 0.0f, graf);
+#if defined(GEKKO) || defined(__wii__)
+    wii_item_wheel_draw();
+#endif
 #if TARGET_PC
     // Widescreen (pc_aspect.h): the timers move right with the HUD (16:9 code, 0x801F0678/94).
     if (sScrTimer1 != NULL) {

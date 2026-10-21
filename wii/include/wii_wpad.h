@@ -8,6 +8,12 @@
 extern "C" {
 #endif
 
+// Active Controller Type
+typedef enum {
+    WII_CONTROLLER_GAMECUBE = 0, // Classic GameCube controller (HUD shows GC layout)
+    WII_CONTROLLER_WIIMOTE  = 1, // Wii Remote + Nunchuk (HUD shows Skyward Sword Wii layout)
+} WiiControllerType;
+
 // Wind Waker Baton Directions (matching mDoAud_ARM_*_e)
 typedef enum {
     WII_TACT_DIR_CENTER = 0,
@@ -45,6 +51,10 @@ void wii_wpad_init(void);
 // Poll controllers every frame
 void wii_wpad_update(void);
 
+// Controller Auto-Detection
+WiiControllerType wii_get_active_controller(void);
+void wii_set_active_controller(WiiControllerType type);
+
 // Baton conducting gesture processing
 void wii_tact_gesture_update(float metronome_beat_rate);
 WiiTactDirection wii_tact_get_direction(void);
@@ -53,11 +63,19 @@ WiiTactMeter wii_tact_get_meter(void);
 
 // First-person gyro aiming for Bow, Boomerang, Hookshot, Telescope
 void wii_aiming_get_offset(WiiAimingOffset* out_offset);
+void wii_aiming_recenter(void);
+
+// D-Pad Quick Tool Slot Management (0 = Left Wing / X, 1 = Up Wing / Y, 2 = Right Wing / Z)
+int  wii_get_active_tool_slot(void);
+void wii_set_active_tool_slot(int slot);
+
+// Skyward Sword Radial Item Wheel State ([B] Hold)
+bool wii_is_radial_wheel_open(void);
 
 // Haptic feedback (trigger a short rumble pulse)
 void wii_haptic_beat_pulse(uint32_t duration_ms);
 
-// Bridge Wii Remote + Nunchuk into GameCube PADStatus structure
+// Bridge Wii Remote + Nunchuk into GameCube PADStatus structure with auto-detect
 void wii_pad_poll(void* pad_status_array);
 
 #ifdef __cplusplus

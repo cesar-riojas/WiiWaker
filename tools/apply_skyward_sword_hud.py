@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Applies Skyward Sword's iconic vertical Wii Remote HUD layout to The Wind Waker:
-- Stacks Action (A), Sword (B), Item [1], Item [2], and Item [Z] vertically on the right margin
-- Aligns contextual action text to the left of the (A) button
-- Re-packs menures.arc and injects it into WiiWaker_Playable.iso
+Applies Skyward Sword's exact in-game HUD hierarchy (from official reference):
+- Top: Ornate golden gear emblem with [B] button & "Items/Sword" text below it
+- Middle: D-Pad (+) cross-key
+- Lower: Domed (A) button with dynamic contextual text ("Dodge/Roll/Open") below it
+- Bottom: (-) and (+) buttons
 """
 
 import sys
@@ -15,7 +16,7 @@ sys.path.append("/Users/cesarriojas/Games/betterww")
 from wwlib.rarc import RARC
 from wwlib.gcm import GCM
 
-def apply_ss_hud_layout():
+def apply_ss_hud_exact():
     menures_path = "/Users/cesarriojas/Games/WiiWaker/dist/apps/WiiWaker/files/res/Msg/menures.arc"
     print(f"Reading {menures_path}...")
 
@@ -28,50 +29,50 @@ def apply_ss_hud_layout():
     entry = rarc.get_file_entry("main_parts1.blo")
     data = bytearray(entry.data.getvalue())
 
-    # Target new positions for Skyward Sword vertical stack:
+    # Exact Skyward Sword vertical stack:
     # Right column center around X=576
     new_coords = {
-        # --- (A) Action Button & Contextual Labels (Row 1: Y ~ 40-90) ---
-        "bawe": (550, 40),      # A button outer circle base
-        "baa":  (570, 60),      # A button icon
-        "bat2": (535, 25),      # A button active enlarged ring
-        "baa2": (566, 56),      # A button active enlarged icon
-        "bawd": (460, 56),      # Contextual action text ("Open", "Roll", "Grab", etc.)
-        "bawp": (460, 56),      # "Put away" action text
-        "basv": (460, 56),      # Save / Special action text
+        # --- TOP: [B] Button (Items/Sword) inside Golden Gear Ring (Y ~ 35 - 95) ---
+        "baat": (552, 35),      # B button ornate golden base/gear
+        "bab":  (564, 47),      # [B] button glyph
+        "ba01": (552, 35),      # Item 1 frame (co-located inside B gear)
+        "b001": (556, 42),      # Item 1 inner frame
+        "xitk": (552, 35),      # Item icon backing
+        "xitm": (552, 35),      # Item icon
+        "bax1": (540, 50),      # Item indicator tab
+        "x10":  (570, 75),      # Ammo tens
+        "x01":  (583, 75),      # Ammo ones
 
-        # --- (B) Sword / Cancel Button (Row 2: Y ~ 108-148) ---
-        "baat": (558, 108),     # B button base
-        "bab":  (570, 120),     # B button icon
+        # --- MIDDLE: D-Pad (+) Cross Key / Secondary Quick Slots (Y ~ 120 - 170) ---
+        "ba02": (556, 125),     # Item 2 / D-Pad slot
+        "b002": (558, 130),     # Inner frame
+        "bay":  (540, 135),     # '[2]' badge
+        "yitk": (556, 125),     # Item 2 icon backing
+        "yitm": (556, 125),     # Item 2 icon
+        "y10":  (570, 160),     # Ammo tens
+        "y01":  (583, 160),     # Ammo ones
 
-        # --- Item Slot [1] (Row 3: Y ~ 160-208) ---
-        "ba01": (555, 160),     # Item 1 outer base
-        "b001": (558, 171),     # Item 1 inner frame
-        "bax1": (536, 175),     # '[1]' button badge
-        "xitk": (558, 159),     # Item 1 icon backing
-        "xitm": (558, 159),     # Item 1 icon
-        "x10":  (576, 192),     # Ammo tens
-        "x01":  (589, 192),     # Ammo ones
+        # --- LOWER: Domed (A) Button + Action Label Below (Y ~ 185 - 250) ---
+        "bawe": (554, 185),     # A button outer base circle
+        "baa":  (566, 197),     # (A) button glyph
+        "bat2": (538, 170),     # A button active enlarged ring
+        "baa2": (562, 194),     # A button active enlarged glyph
+        # In Skyward Sword, the action text ("Dodge", "Roll", "Open") is directly BELOW (A)
+        "bawd": (532, 230),     # Contextual action text
+        "bawp": (532, 230),     # "Put away" text
+        "basv": (532, 230),     # Save / Special action text
 
-        # --- Item Slot [2] (Row 4: Y ~ 222-270) ---
-        "ba02": (555, 222),     # Item 2 outer base
-        "b002": (558, 233),     # Item 2 inner frame
-        "bay":  (536, 237),     # '[2]' button badge
-        "yitk": (555, 221),     # Item 2 icon backing
-        "yitm": (555, 221),     # Item 2 icon
-        "y10":  (576, 254),     # Ammo tens
-        "y01":  (589, 254),     # Ammo ones
+        # --- BOTTOM: (-) and (+) Buttons (Y ~ 275 - 315) ---
+        # (-) button with metallic ring on the left
+        "baz":  (544, 275),     # (-) base / Item 3 slot
+        "zitk": (544, 275),     # Item icon
+        "zitm": (545, 276),
+        "z10":  (558, 295),
+        "z01":  (571, 295),
 
-        # --- Item Slot [Z] (Row 5: Y ~ 284-332) ---
-        "baz":  (554, 284),     # Item 3 base
-        "zitk": (554, 276),     # Item 3 icon backing
-        "zitm": (555, 277),     # Item 3 icon
-        "z10":  (576, 308),     # Ammo tens
-        "z01":  (589, 308),     # Ammo ones
-
-        # --- Nunchuk Shield / C Button (Top Banner) ---
-        "ba0r": (586, 5),       # R button base
-        "bar1": (602, 17),      # (C) button badge
+        # (+) button smaller on the right
+        "ba0r": (588, 280),     # (+) base
+        "bar1": (594, 286),     # (+) glyph
     }
 
     pos = 0x20
@@ -83,31 +84,26 @@ def apply_ss_hud_layout():
             name4 = data[pos+12:pos+16].decode("latin1", "ignore").strip("\x00").strip()
             if name4 in new_coords:
                 nx, ny = new_coords[name4]
-                # pack big-endian s16 at pos+0x10 and pos+0x12
                 struct.pack_into(">2h", data, pos + 0x10, nx, ny)
                 patched_count += 1
-                print(f"  [>] Positioned '{name4}' at ({nx}, {ny})")
             pos += size
         else:
             pos += 4
 
-    print(f"Patched {patched_count} pane coordinates to Skyward Sword vertical layout!")
+    print(f"Patched {patched_count} pane coordinates to exact Skyward Sword HUD hierarchy!")
 
-    # Save modified blo back into entry
     entry.data = BytesIO(data)
-
     rarc.save_changes()
     with open(menures_path, "wb") as f:
         f.write(rarc.data.getvalue())
 
-    print(f"Saved Skyward Sword HUD layout to {menures_path}!")
+    print(f"Saved exact Skyward Sword HUD layout to {menures_path}!")
 
     # Inject into game ISO
     in_iso = "/Users/cesarriojas/Games/Game Cube/Better Wind Waker/BetterWindWaker.iso"
     out_iso = "/Users/cesarriojas/Games/Game Cube/Better Wind Waker/WiiWaker_Playable.iso"
     nintendont_path = "/Users/cesarriojas/Games/Game Cube/Better Wind Waker/SD_Card_Ready/games/The Legend of Zelda The Wind Waker [GZLE01]/game.iso"
 
-    print(f"Re-injecting into playable ISO: {out_iso}...")
     gcm = GCM(in_iso)
     gcm.read_entire_disc()
     gcm.changed_files["files/res/Msg/menures.arc"] = BytesIO(rarc.data.getvalue())
@@ -115,7 +111,7 @@ def apply_ss_hud_layout():
 
     import shutil
     shutil.copy2(out_iso, nintendont_path)
-    print("Skyward Sword HUD injected into WiiWaker_Playable.iso and SD Card copy!")
+    print("Updated WiiWaker_Playable.iso with exact Skyward Sword layout!")
 
 if __name__ == "__main__":
-    apply_ss_hud_layout()
+    apply_ss_hud_exact()
